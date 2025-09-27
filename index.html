@@ -181,15 +181,16 @@
                             ເຂົ້າສູ່ລະບົບ
                         </button>
                     </div>
+                    
                     <div id="loggedInSection" class="hidden flex flex-col space-y-2 w-full sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
                         <span class="text-green-600 font-medium">🟢 ແອດມິນ</span>
                         <button onclick="logout()" class="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
                             ອອກຈາກລະບົບ
                         </button>
                     </div>
-                    </div>
                 </div>
             </div>
+        </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -466,7 +467,6 @@
             document.getElementById('modalMessage').textContent = message;
             document.getElementById('modalCancel').style.display = showCancel ? 'block' : 'none';
             
-            // Fix: Ensure alert modal is on top
             document.getElementById('modal').style.zIndex = 2000; 
             document.getElementById('modal').classList.add('show');
 
@@ -476,16 +476,15 @@
 
         function closeModal() {
             document.getElementById('modal').classList.remove('show');
-            document.getElementById('modal').style.zIndex = 1000; // Reset z-index
+            document.getElementById('modal').style.zIndex = 1000; 
             currentAction = null;
             currentActionData = null;
         }
 
-        // Fix: confirmAction now handles auto-closing the confirmation modal
         function confirmAction() {
             const action = currentAction;
             const data = currentActionData;
-            closeModal(); // Close the confirmation modal first
+            closeModal(); 
             if (action) {
                 action(data);
             }
@@ -508,6 +507,8 @@
                 localStorage.setItem('adminLoggedIn', 'true');
                 showAdminPanel();
                 document.getElementById('adminPassword').value = '';
+                // ໂຫຼດຄິວໃໝ່ເພື່ອສະແດງປຸ່ມປ່ຽນສະຖານະ ແລະລົບ
+                updateDisplay(); 
             } else {
                 showModal('ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ', 'ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!');
             }
@@ -516,8 +517,9 @@
         // Show admin panel
         function showAdminPanel() {
             document.getElementById('loginSection').classList.add('hidden');
+            // ເພີ່ມຄລາສ flex ເພື່ອໃຫ້ສະແດງຖືກຕ້ອງ
             document.getElementById('loggedInSection').classList.remove('hidden', 'flex-col', 'space-y-2', 'w-full', 'sm:flex-row', 'sm:items-center', 'sm:space-x-3', 'sm:space-y-0');
-            document.getElementById('loggedInSection').classList.add('flex', 'items-center', 'space-x-3'); // ເພີ່ມຄລາສເກົ່າທີ່ຖືກລຶບໄປໃນໂຄ້ດ HTML ຄືນມາ
+            document.getElementById('loggedInSection').classList.add('flex', 'items-center', 'space-x-3'); 
             document.getElementById('adminPanel').classList.remove('hidden');
         }
 
@@ -528,6 +530,8 @@
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('loggedInSection').classList.add('hidden');
             document.getElementById('adminPanel').classList.add('hidden');
+            // ໂຫຼດຄິວໃໝ່ເພື່ອເຊື່ອງປຸ່ມປ່ຽນສະຖານະ ແລະລົບ
+            updateDisplay(); 
         }
 
         // Show add queue modal
@@ -582,7 +586,6 @@
             const status = document.getElementById('modalStatusSelect').value;
 
             if (!job || !customer) {
-                // Fix: showModal is now on top due to z-index fix
                 showModal('ຂໍ້ມູນບໍ່ຄົບຖ້ວນ', 'ກະລຸນາກໍາຂໍ້ມູນໃຫ້ຄົບຖ້ວນ');
                 return;
             }
@@ -602,7 +605,6 @@
             };
 
             push(queuesRef, newQueue).then(() => {
-                // Fix: Auto-close add queue modal on success
                 closeAddQueueModal(); 
                 setTimeout(() => {
                     showModal('ເພີ່ມຄິວສຳເລັດ', `ເພີ່ມຄິວ #${queueId} ສຳເລັດແລ້ວ!`);
@@ -616,6 +618,7 @@
         // Update status
         function updateStatus(firebaseKey, newStatus) {
             if (!isAdminLoggedIn) {
+                // ປ້ອງກັນການອັບເດດສະຖານະຖ້າບໍ່ແມ່ນແອັດມິນ
                 showModal('ບໍ່ສາມາດອັບເດດສະຖານະໄດ້', 'ກະລຸນາເຂົ້າສູ່ລະບົບແອດມິນກ່ອນ!');
                 return;
             }
@@ -647,6 +650,7 @@
         // Delete queue
         function deleteQueue(firebaseKey) {
             if (!isAdminLoggedIn) {
+                // ປ້ອງກັນການລົບຄິວຖ້າບໍ່ແມ່ນແອັດມິນ
                 showModal('ບໍ່ສາມາດລົບຄິວໄດ້', 'ສຳຫລັບແອັດມິນເທົ່ານັ້ນ!');
                 return;
             }
@@ -656,7 +660,6 @@
                 return;
             }
 
-            // The confirmAction function will automatically close the confirmation modal on 'ຕົກລົງ' click
             showModal('ຢືນຢັນການລົບຄິວ', 'ທ່ານແນ່ໃຈຫຼືບໍ່ທີ່ຈະລົບຄິວນີ້?', true, function(key) {
                 const { database, ref, remove } = window.firebaseDB;
                 const queueRef = ref(database, `queues/${key}`);
@@ -681,32 +684,19 @@
             };
 
             const config = statusConfig[queue.status];
+            
+            // START: ເພີ່ມ HTML ສຳລັບປຸ່ມຕ່າງໆ ພາຍໃຕ້ເງື່ອນໄຂ isAdminLoggedIn
+            let adminControls = '';
 
-            return `
-                <div class="status-${queue.status} rounded-xl p-4 card-hover">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-lg">${config.icon}</span>
-                            <span class="font-semibold text-gray-900">ຄິວ #${queue.id}</span>
-                        </div>
-                        <button onclick="deleteQueue('${queue.firebaseKey}')" 
-                                class="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors">
-                            ❌
-                        </button>
-                    </div>
-                    
-                    <div class="space-y-2 mb-4">
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-600">ລາຍການ:</span>
-                            <span class="font-medium text-gray-900">${queue.job}</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-600">ລູກຄ້າ:</span>
-                            <span class="font-medium text-gray-900">${queue.customer}</span>
-                        </div>
-                        <div class="text-xs text-gray-500">${queue.timestamp}</div>
-                    </div>
-                    
+            if (isAdminLoggedIn) {
+                const deleteButton = `
+                    <button onclick="deleteQueue('${queue.firebaseKey}')" 
+                            class="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors">
+                        ❌
+                    </button>
+                `;
+
+                const statusButtons = `
                     <div class="flex flex-wrap gap-2">
                         ${queue.status !== 'waiting' ? `
                             <button onclick="updateStatus('${queue.firebaseKey}', 'waiting')" 
@@ -727,6 +717,65 @@
                             </button>
                         ` : ''}
                     </div>
+                `;
+                
+                // ຈັດວາງປຸ່ມລົບ ແລະ ປຸ່ມປ່ຽນສະຖານະໃນພາກສ່ວນຄວບຄຸມແອັດມິນ
+                adminControls = `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg">${config.icon}</span>
+                                <span class="font-semibold text-gray-900">ຄິວ #${queue.id}</span>
+                            </div>
+                            ${deleteButton}
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລາຍການ:</span>
+                            <span class="font-medium text-gray-900">${queue.job}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລູກຄ້າ:</span>
+                            <span class="font-medium text-gray-900">${queue.customer}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${queue.timestamp}</div>
+                    </div>
+                    
+                    ${statusButtons}
+                `;
+            } else {
+                // ໂຄ້ດສຳລັບຜູ້ໃຊ້ທົ່ວໄປ (ບໍ່ມີປຸ່ມລົບ ຫຼື ປຸ່ມປ່ຽນສະຖານະ)
+                adminControls = `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg">${config.icon}</span>
+                                <span class="font-semibold text-gray-900">ຄິວ #${queue.id}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລາຍການ:</span>
+                            <span class="font-medium text-gray-900">${queue.job}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລູກຄ້າ:</span>
+                            <span class="font-medium text-gray-900">${queue.customer}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${queue.timestamp}</div>
+                    </div>
+                    
+                    `;
+            }
+            // END: ເພີ່ມ HTML ສຳລັບປຸ່ມຕ່າງໆ ພາຍໃຕ້ເງື່ອນໄຂ isAdminLoggedIn
+
+            return `
+                <div class="status-${queue.status} rounded-xl p-4 card-hover">
+                    ${adminControls}
                 </div>
             `;
         }
