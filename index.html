@@ -156,7 +156,7 @@
 <body class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
     <header class="sticky top-0 z-50 glass-effect">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                         <span class="text-white font-bold text-lg">N</span>
@@ -172,24 +172,24 @@
                     </div>
                 </div>
 
-                <div id="adminStatus" class="flex items-center space-x-4">
-                    <div id="loginSection" class="flex items-center space-x-3">
+                <div id="adminStatus" class="flex items-center space-x-4 w-full sm:w-auto mt-4 sm:mt-0 justify-end">
+                    
+                    <div id="loginSection" class="flex flex-col space-y-2 w-full sm:flex-row sm:space-x-3 sm:space-y-0">
                         <input type="password" id="adminPassword" placeholder="ສຳຫລັບແອດມິນເທົ່ານັ້ນ" 
-                               class="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-                        <button onclick="login()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium">
+                               class="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <button onclick="login()" class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium">
                             ເຂົ້າສູ່ລະບົບ
                         </button>
                     </div>
-                    
-                    <div id="loggedInSection" class="hidden flex items-center space-x-3">
+                    <div id="loggedInSection" class="hidden flex flex-col space-y-2 w-full sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
                         <span class="text-green-600 font-medium">🟢 ແອດມິນ</span>
-                        <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                        <button onclick="logout()" class="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
                             ອອກຈາກລະບົບ
                         </button>
                     </div>
+                    </div>
                 </div>
             </div>
-        </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -516,7 +516,8 @@
         // Show admin panel
         function showAdminPanel() {
             document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('loggedInSection').classList.remove('hidden');
+            document.getElementById('loggedInSection').classList.remove('hidden', 'flex-col', 'space-y-2', 'w-full', 'sm:flex-row', 'sm:items-center', 'sm:space-x-3', 'sm:space-y-0');
+            document.getElementById('loggedInSection').classList.add('flex', 'items-center', 'space-x-3'); // ເພີ່ມຄລາສເກົ່າທີ່ຖືກລຶບໄປໃນໂຄ້ດ HTML ຄືນມາ
             document.getElementById('adminPanel').classList.remove('hidden');
         }
 
