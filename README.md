@@ -1,1 +1,3 @@
 # NatnitiCheckqueue
+
+Natniti Store only
