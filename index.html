@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natniti Store Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getDatabase, ref, push, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+    
+    // Firebase configuration (ໃຊ້ demo database)
+    const firebaseConfig = {
+  apiKey: "AIzaSyBy6X8Lnp-fhyVHdP_3d2xF0nIUKe6HNG4",
+  authDomain: "natniti-queue.firebaseapp.com",
+  databaseURL: "https://natniti-queue-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "natniti-queue",
+  storageBucket: "natniti-queue.firebasestorage.app",
+  messagingSenderId: ". ",
+  appId: "1:. :web:65b62cddf6c9f609892460",
+  measurementId: "G-CE32YCVJGW"
+};
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    
+    // Make Firebase functions available globally
+    window.firebaseDB = {
+        database,
+        ref,
+        push,
+        set,
+        onValue,
+        remove
+    };
+    
+    // Initialize app when Firebase is ready
+    window.initializeApp();
+</script>
+
+<style>
+    body {
+        box-sizing: border-box;
+        font-family: 'Noto Sans Lao', 'Inter', sans-serif;
+    }
+    
+    .glass-effect {
+        backdrop-filter: blur(20px);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .card-hover {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .status-waiting {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .status-processing {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .status-completed {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left: 4px solid #10b981;
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+    }
+    
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+    
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+    
+    .modal.show .modal-content {
+        transform: scale(1);
+    }
+    
+    .connection-status {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .connection-status.connected {
+        background: #10b981;
+        color: white;
+    }
+    
+    .connection-status.disconnected {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .connection-status.connecting {
+        background: #f59e0b;
+        color: white;
+    }
+</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <header class="sticky top-0 z-50 glass-effect">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">N</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Natniti Store Queue</h1>
+                        <div class="flex items-center space-x-3">
+                            <p class="text-sm text-gray-600">ເຊັກຄິວ Natniti Store</p>
+                            <div id="connectionStatus" class="connection-status connecting">
+                                🔄 ກຳລັງເຊື່ອມຕໍ່...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="adminStatus" class="flex items-center space-x-4">
+                    <div id="loginSection" class="flex items-center space-x-3">
+                        <input type="password" id="adminPassword" placeholder="ສຳຫລັບແອດມິນເທົ່ານັ້ນ" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <button onclick="login()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium">
+                            ເຂົ້າສູ່ລະບົບ
+                        </button>
+                    </div>
+                    
+                    <div id="loggedInSection" class="hidden flex items-center space-x-3">
+                        <span class="text-green-600 font-medium">🟢 ແອດມິນ</span>
+                        <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                            ອອກຈາກລະບົບ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div id="adminPanel" class="hidden">
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <span class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                        <span class="text-white text-sm">⚙️</span>
+                    </span>
+                    ແຜງຄວບຄຸມແອດມິນ
+                </h2>
+                
+                <div class="flex justify-center">
+                    <button onclick="showAddQueueModal()" 
+                            class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium text-lg">
+                        ➕ ເພີ່ມຄິວໃໝ່
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">ລໍຖ້າດຳເນີນການ</p>
+                        <p class="text-3xl font-bold text-yellow-600" id="totalWaiting">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white text-xl">⏳</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">ກຳລັງດຳເນີນການ</p>
+                        <p class="text-3xl font-bold text-blue-600" id="totalProcessing">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center pulse-animation">
+                        <span class="text-white text-xl">🔄</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">ສຳເລັດແລ້ວ</p>
+                        <p class="text-3xl font-bold text-green-600" id="totalCompleted">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                        <span class="text-white text-xl">✅</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <span class="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-white text-sm">⏳</span>
+                            </span>
+                            ລໍຖ້າດຳເນີນການ
+                        </h3>
+                        <span id="waitingCount" class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">0</span>
+                    </div>
+                </div>
+                <div id="waitingQueue" class="p-4 space-y-4 max-h-96 overflow-y-auto scrollbar-hide">
+                    <div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ລໍຖ້າດຳເນີນການ</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <span class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3 pulse-animation">
+                                <span class="text-white text-sm">🔄</span>
+                            </span>
+                            ກຳລັງດຳເນີນການ
+                        </h3>
+                        <span id="processingCount" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">0</span>
+                    </div>
+                </div>
+                <div id="processingQueue" class="p-4 space-y-4 max-h-96 overflow-y-auto scrollbar-hide">
+                    <div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ກຳລັງດຳເນີນການ</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <span class="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-white text-sm">✅</span>
+                            </span>
+                            ສຳເລັດແລ້ວ
+                        </h3>
+                        <span id="completedCount" class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">0</span>
+                    </div>
+                </div>
+                <div id="completedQueue" class="p-4 space-y-4 max-h-96 overflow-y-auto scrollbar-hide">
+                    <div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ສຳເລັດແລ້ວ</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            <p id="modalMessage" class="text-gray-600 mb-6"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="modalCancel" onclick="closeModal()" 
+                        class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    ຍົກເລີກ
+                </button>
+                <button id="modalConfirm" onclick="confirmAction()" 
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    ຕົກລົງ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addQueueModal" class="modal" style="z-index: 1010;">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900">ເພີ່ມຄິວໃໝ່</h3>
+                <button onclick="closeAddQueueModal()" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ປະເພດວຽກ</label>
+                    <input type="text" id="modalJobInput" placeholder="ປ້ອນປະເພດ" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ຊື່ລູກຄ້າ</label>
+                    <input type="text" id="modalCustomerInput" placeholder="ກະລຸນາໃສ່ຊື່ເຟສ/ລູກຄ້າ" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ເລືອກສະຖານະ</label>
+                    <button type="button" onclick="showStatusModal()" id="statusButton" 
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-left bg-white hover:bg-gray-50 transition-colors flex items-center justify-between">
+                        <span id="selectedStatusText">⏳ ລໍຖ້າດຳເນີນການ</span>
+                        <span class="text-gray-400">▼</span>
+                    </button>
+                    <input type="hidden" id="modalStatusSelect" value="waiting">
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAddQueueModal()" 
+                        class="px-6 py-3 text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                    ຍົກເລີກ
+                </button>
+                <button onclick="addQueueFromModal()" 
+                        class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium">
+                    ເພີ່ມຄິວ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusModal" class="modal" style="z-index: 1020;">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900">ເລືອກສະຖານະ</h3>
+                <button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            
+            <div class="space-y-3">
+                <button onclick="selectStatus('waiting', '⏳ ລໍຖ້າດຳເນີນການ')" 
+                        class="w-full p-4 text-left rounded-xl border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 transition-colors flex items-center space-x-3">
+                    <span class="text-2xl">⏳</span>
+                    <div>
+                        <div class="font-medium text-gray-900">ລໍຖ້າດຳເນີນການ</div>
+                        <div class="text-sm text-gray-600">ຄິວທີ່ລໍຖ້າການດຳເນີນການ</div>
+                    </div>
+                </button>
+                
+                <button onclick="selectStatus('processing', '🔄 ກຳລັງດຳເນີນການ')" 
+                        class="w-full p-4 text-left rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center space-x-3">
+                    <span class="text-2xl">🔄</span>
+                    <div>
+                        <div class="font-medium text-gray-900">ກຳລັງດຳເນີນການ</div>
+                        <div class="text-sm text-gray-600">ຄິວທີ່ກຳລັງດຳເນີນການຢູ່</div>
+                    </div>
+                </button>
+                
+                <button onclick="selectStatus('completed', '✅ ສຳເລັດແລ້ວ')" 
+                        class="w-full p-4 text-left rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 transition-colors flex items-center space-x-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <div class="font-medium text-gray-900">ສຳເລັດແລ້ວ</div>
+                        <div class="text-sm text-gray-600">ຄິວທີ່ດຳເນີນການສຳເລັດແລ້ວ</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let queueData = [];
+        let isAdminLoggedIn = false;
+        let currentAction = null;
+        let currentActionData = null;
+        let isConnected = false;
+
+        // Initialize app when Firebase is ready
+        window.initializeApp = function() {
+            checkAdminStatus();
+            setupFirebaseListeners();
+            updateConnectionStatus('connected');
+        };
+
+        // Connection status
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            isConnected = status === 'connected';
+            
+            switch(status) {
+                case 'connected':
+                    statusElement.className = 'connection-status connected';
+                    statusElement.innerHTML = '🟢 ເຊື່ອມຕໍ່ແລ້ວ';
+                    break;
+                case 'disconnected':
+                    statusElement.className = 'connection-status disconnected';
+                    statusElement.innerHTML = '🔴 ຂາດການເຊື່ອມຕໍ່';
+                    break;
+                case 'connecting':
+                    statusElement.className = 'connection-status connecting';
+                    statusElement.innerHTML = '🔄 ກຳລັງເຊື່ອມຕໍ່...';
+                    break;
+            }
+        }
+
+        // Setup Firebase listeners
+        function setupFirebaseListeners() {
+            if (!window.firebaseDB) return;
+            
+            const { database, ref, onValue } = window.firebaseDB;
+            const queuesRef = ref(database, 'queues');
+            
+            onValue(queuesRef, (snapshot) => {
+                const data = snapshot.val();
+                queueData = data ? Object.keys(data).map(key => ({
+                    firebaseKey: key,
+                    ...data[key]
+                })) : [];
+                updateDisplay();
+            }, (error) => {
+                console.error('Firebase error:', error);
+                updateConnectionStatus('disconnected');
+            });
+        }
+
+        // Modal functions
+        function showModal(title, message, showCancel = false, action = null, actionData = null) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalCancel').style.display = showCancel ? 'block' : 'none';
+            
+            // Fix: Ensure alert modal is on top
+            document.getElementById('modal').style.zIndex = 2000; 
+            document.getElementById('modal').classList.add('show');
+
+            currentAction = action;
+            currentActionData = actionData;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+            document.getElementById('modal').style.zIndex = 1000; // Reset z-index
+            currentAction = null;
+            currentActionData = null;
+        }
+
+        // Fix: confirmAction now handles auto-closing the confirmation modal
+        function confirmAction() {
+            const action = currentAction;
+            const data = currentActionData;
+            closeModal(); // Close the confirmation modal first
+            if (action) {
+                action(data);
+            }
+        }
+
+        // Check admin status on load
+        function checkAdminStatus() {
+            const adminStatus = localStorage.getItem('adminLoggedIn');
+            if (adminStatus === 'true') {
+                isAdminLoggedIn = true;
+                showAdminPanel();
+            }
+        }
+
+        // Login function
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'natnitiadmin1231฿?!') {
+                isAdminLoggedIn = true;
+                localStorage.setItem('adminLoggedIn', 'true');
+                showAdminPanel();
+                document.getElementById('adminPassword').value = '';
+            } else {
+                showModal('ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ', 'ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ!');
+            }
+        }
+
+        // Show admin panel
+        function showAdminPanel() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('loggedInSection').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+        }
+
+        // Logout function
+        function logout() {
+            isAdminLoggedIn = false;
+            localStorage.removeItem('adminLoggedIn');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('loggedInSection').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+        }
+
+        // Show add queue modal
+        function showAddQueueModal() {
+            if (!isAdminLoggedIn) {
+                showModal('ບໍ່ສາມາດເພີ່ມຄິວໄດ້', 'ກະລຸນາເຂົ້າສູ່ລະບົບແອດມິນກ່ອນ!');
+                return;
+            }
+            if (!isConnected) {
+                showModal('ບໍ່ສາມາດເພີ່ມຄິວໄດ້', 'ກະລຸນາລໍຖ້າການເຊື່ອມຕໍ່ອິນເຕີເນັດ!');
+                return;
+            }
+            document.getElementById('addQueueModal').classList.add('show');
+        }
+
+        // Close add queue modal
+        function closeAddQueueModal() {
+            document.getElementById('addQueueModal').classList.remove('show');
+            // Clear inputs
+            document.getElementById('modalJobInput').value = '';
+            document.getElementById('modalCustomerInput').value = '';
+            document.getElementById('modalStatusSelect').value = 'waiting';
+            document.getElementById('selectedStatusText').textContent = '⏳ ລໍຖ້າດຳເນີນການ';
+        }
+
+        // Show status selection modal
+        function showStatusModal() {
+            document.getElementById('statusModal').classList.add('show');
+        }
+
+        // Close status selection modal
+        function closeStatusModal() {
+            document.getElementById('statusModal').classList.remove('show');
+        }
+
+        // Select status
+        function selectStatus(value, text) {
+            document.getElementById('modalStatusSelect').value = value;
+            document.getElementById('selectedStatusText').textContent = text;
+            closeStatusModal();
+        }
+
+        // Add queue from modal
+        function addQueueFromModal() {
+            if (!window.firebaseDB || !isConnected) {
+                showModal('ບໍ່ສາມາດເພີ່ມຄິວໄດ້', 'ກະລຸນາລໍຖ້າການເຊື່ອມຕໍ່ອິນເຕີເນັດ!');
+                return;
+            }
+
+            const job = document.getElementById('modalJobInput').value.trim();
+            const customer = document.getElementById('modalCustomerInput').value.trim();
+            const status = document.getElementById('modalStatusSelect').value;
+
+            if (!job || !customer) {
+                // Fix: showModal is now on top due to z-index fix
+                showModal('ຂໍ້ມູນບໍ່ຄົບຖ້ວນ', 'ກະລຸນາກໍາຂໍ້ມູນໃຫ້ຄົບຖ້ວນ');
+                return;
+            }
+
+            const { database, ref, push } = window.firebaseDB;
+            const queuesRef = ref(database, 'queues');
+            
+            // Generate unique ID
+            const queueId = Date.now();
+            
+            const newQueue = {
+                id: queueId,
+                job: job,
+                customer: customer,
+                status: status,
+                timestamp: new Date().toLocaleString('th-TH')
+            };
+
+            push(queuesRef, newQueue).then(() => {
+                // Fix: Auto-close add queue modal on success
+                closeAddQueueModal(); 
+                setTimeout(() => {
+                    showModal('ເພີ່ມຄິວສຳເລັດ', `ເພີ່ມຄິວ #${queueId} ສຳເລັດແລ້ວ!`);
+                }, 100);
+            }).catch((error) => {
+                console.error('Error adding queue:', error);
+                showModal('ເກີດຂໍ້ຜິດພາດ', 'ບໍ່ສາມາດເພີ່ມຄິວໄດ້ ກະລຸນາລອງໃໝ່!');
+            });
+        }
+
+        // Update status
+        function updateStatus(firebaseKey, newStatus) {
+            if (!isAdminLoggedIn) {
+                showModal('ບໍ່ສາມາດອັບເດດສະຖານະໄດ້', 'ກະລຸນາເຂົ້າສູ່ລະບົບແອດມິນກ່ອນ!');
+                return;
+            }
+
+            if (!window.firebaseDB || !isConnected) {
+                showModal('ບໍ່ສາມາດອັບເດດສະຖານະໄດ້', 'ກະລຸນາລໍຖ້າການເຊື່ອມຕໍ່ອິນເຕີເນັດ!');
+                return;
+            }
+
+            const { database, ref, set } = window.firebaseDB;
+            const queue = queueData.find(q => q.firebaseKey === firebaseKey);
+            
+            if (queue) {
+                const updatedQueue = {
+                    ...queue,
+                    status: newStatus,
+                    timestamp: new Date().toLocaleString('th-TH')
+                };
+                delete updatedQueue.firebaseKey;
+
+                const queueRef = ref(database, `queues/${firebaseKey}`);
+                set(queueRef, updatedQueue).catch((error) => {
+                    console.error('Error updating queue:', error);
+                    showModal('ເກີດຂໍ້ຜິດພາດ', 'ບໍ່ສາມາດອັບເດດສະຖານະໄດ້!');
+                });
+            }
+        }
+
+        // Delete queue
+        function deleteQueue(firebaseKey) {
+            if (!isAdminLoggedIn) {
+                showModal('ບໍ່ສາມາດລົບຄິວໄດ້', 'ສຳຫລັບແອັດມິນເທົ່ານັ້ນ!');
+                return;
+            }
+
+            if (!window.firebaseDB || !isConnected) {
+                showModal('ບໍ່ສາມາດລົບຄິວໄດ້', 'ກະລຸນາລໍຖ້າການເຊື່ອມຕໍ່ອິນເຕີເນັດ!');
+                return;
+            }
+
+            // The confirmAction function will automatically close the confirmation modal on 'ຕົກລົງ' click
+            showModal('ຢືນຢັນການລົບຄິວ', 'ທ່ານແນ່ໃຈຫຼືບໍ່ທີ່ຈະລົບຄິວນີ້?', true, function(key) {
+                const { database, ref, remove } = window.firebaseDB;
+                const queueRef = ref(database, `queues/${key}`);
+                
+                remove(queueRef).then(() => {
+                    setTimeout(() => {
+                        showModal('ລົບຄິວສຳເລັດ', `ລົບຄິວສຳເລັດແລ້ວ!`);
+                    }, 100);
+                }).catch((error) => {
+                    console.error('Error deleting queue:', error);
+                    showModal('ເກີດຂໍ້ຜິດພາດ', 'ບໍ່ສາມາດລົບຄິວໄດ້!');
+                });
+            }, firebaseKey);
+        }
+
+        // Create queue card
+        function createQueueCard(queue) {
+            const statusConfig = {
+                waiting: { color: 'yellow', icon: '⏳', text: 'ລໍຖ້າດຳເນີນການ' },
+                processing: { color: 'blue', icon: '🔄', text: 'ກຳລັງດຳເນີນການ' },
+                completed: { color: 'green', icon: '✅', text: 'ສຳເລັດແລ້ວ' }
+            };
+
+            const config = statusConfig[queue.status];
+
+            return `
+                <div class="status-${queue.status} rounded-xl p-4 card-hover">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg">${config.icon}</span>
+                            <span class="font-semibold text-gray-900">ຄິວ #${queue.id}</span>
+                        </div>
+                        <button onclick="deleteQueue('${queue.firebaseKey}')" 
+                                class="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors">
+                            ❌
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລາຍການ:</span>
+                            <span class="font-medium text-gray-900">${queue.job}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">ລູກຄ້າ:</span>
+                            <span class="font-medium text-gray-900">${queue.customer}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${queue.timestamp}</div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2">
+                        ${queue.status !== 'waiting' ? `
+                            <button onclick="updateStatus('${queue.firebaseKey}', 'waiting')" 
+                                    class="px-3 py-1 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-colors">
+                                ລໍຖ້າດຳເນີນການ
+                            </button>
+                        ` : ''}
+                        ${queue.status !== 'processing' ? `
+                            <button onclick="updateStatus('${queue.firebaseKey}', 'processing')" 
+                                    class="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                                ດຳເນີນການ
+                            </button>
+                        ` : ''}
+                        ${queue.status !== 'completed' ? `
+                            <button onclick="updateStatus('${queue.firebaseKey}', 'completed')" 
+                                    class="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors">
+                                ສຳເລັດແລ້ວ
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update display
+        function updateDisplay() {
+            const waitingQueue = document.getElementById('waitingQueue');
+            const processingQueue = document.getElementById('processingQueue');
+            const completedQueue = document.getElementById('completedQueue');
+
+            // Filter queues
+            const waiting = queueData.filter(q => q.status === 'waiting');
+            const processing = queueData.filter(q => q.status === 'processing');
+            const completed = queueData.filter(q => q.status === 'completed');
+
+            // Update waiting queue
+            if (waiting.length === 0) {
+                waitingQueue.innerHTML = '<div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ລໍຖ້າດຳເນີນການ</div>';
+            } else {
+                waitingQueue.innerHTML = waiting.map(queue => createQueueCard(queue)).join('');
+            }
+
+            // Update processing queue
+            if (processing.length === 0) {
+                processingQueue.innerHTML = '<div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ກຳລັງດຳເນີນການ</div>';
+            } else {
+                processingQueue.innerHTML = processing.map(queue => createQueueCard(queue)).join('');
+            }
+
+            // Update completed queue
+            if (completed.length === 0) {
+                completedQueue.innerHTML = '<div class="text-center py-8 text-gray-500">ບໍ່ມີຄິວທີ່ສຳເລັດແລ້ວ</div>';
+            } else {
+                completedQueue.innerHTML = completed.map(queue => createQueueCard(queue)).join('');
+            }
+
+            // Update counts
+            document.getElementById('waitingCount').textContent = waiting.length;
+            document.getElementById('processingCount').textContent = processing.length;
+            document.getElementById('completedCount').textContent = completed.length;
+
+            // Update statistics
+            document.getElementById('totalWaiting').textContent = waiting.length;
+            document.getElementById('totalProcessing').textContent = processing.length;
+            document.getElementById('totalCompleted').textContent = completed.length;
+        }
+
+        // Event listeners
+        document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+
+        // Initialize when page loads
+        if (window.firebaseDB) {
+            initializeApp();
+        }
+    </script>
+</body>
+</html>
